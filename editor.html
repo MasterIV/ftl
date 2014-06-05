@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<title>FTL Editor</title>
+	<script>
+		var grid = {
+			data: [],
+			rooms: [
+//				{"x":8,"y":5,"w":2,"h":2},
+//				{"x":9,"y":7,"w":2,"h":1},
+//				{"x":8,"y":8,"w":2,"h":2},
+//				{"x":10,"y":5,"w":2,"h":1},
+//				{"x":10,"y":9,"w":2,"h":1},
+//				{"x":12,"y":8,"w":2,"h":2},
+//				{"x":12,"y":5,"w":2,"h":2},
+//				{"x":13,"y":7,"w":2,"h":1},
+//				{"x":14,"y":8,"w":2,"h":1},
+//				{"x":14,"y":6,"w":2,"h":1},
+//				{"x":7,"y":4,"w":1,"h":2},
+//				{"x":7,"y":9,"w":1,"h":2},
+//				{"x":5,"y":8,"w":2,"h":2},
+//				{"x":5,"y":5,"w":2,"h":2}
+			],
+			doors: [
+//				{"p1":{"x":5,"y":6},"p2":{"x":5,"y":7}},
+//				{"p1":{"x":5,"y":8},"p2":{"x":5,"y":9}},
+//				{"p1":{"x":7,"y":4},"p2":{"x":8,"y":4}},
+//				{"p1":{"x":7,"y":11},"p2":{"x":8,"y":11}},
+//				{"p1":{"x":16,"y":8},"p2":{"x":16,"y":9}},
+//				{"p1":{"x":16,"y":6},"p2":{"x":16,"y":7}},
+//				{"p1":{"x":14,"y":6},"p2":{"x":14,"y":7}},
+//				{"p1":{"x":13,"y":7},"p2":{"x":14,"y":7}},
+//				{"p1":{"x":13,"y":8},"p2":{"x":14,"y":8}},
+//				{"p1":{"x":14,"y":8},"p2":{"x":14,"y":9}},
+//				{"p1":{"x":12,"y":9},"p2":{"x":12,"y":10}},
+//				{"p1":{"x":10,"y":9},"p2":{"x":10,"y":10}},
+//				{"p1":{"x":8,"y":9},"p2":{"x":8,"y":10}},
+//				{"p1":{"x":7,"y":9},"p2":{"x":7,"y":10}},
+//				{"p1":{"x":7,"y":5},"p2":{"x":7,"y":6}},
+//				{"p1":{"x":8,"y":5},"p2":{"x":8,"y":6}},
+//				{"p1":{"x":10,"y":5},"p2":{"x":10,"y":6}},
+//				{"p1":{"x":12,"y":5},"p2":{"x":12,"y":6}},
+//				{"p1":{"x":9,"y":7},"p2":{"x":10,"y":7}},
+//				{"p1":{"x":9,"y":8},"p2":{"x":10,"y":8}}
+			],
+			w: 20,
+			h: 15,
+			tile: {
+				w: 30,
+				h: 30
+			}
+		};
+
+		var canvas, ctx, start;
+
+		function clearGrid() {
+			for( var x = 0; x < grid.w; x++ ) {
+				grid[x] = [];
+				for( var y = 0; y < grid.h; y++ )
+					grid[x][y] = false;
+			}
+		}
+
+		function drawGrid() {
+			canvas.width = grid.w * grid.tile.w;
+			canvas.height = grid.h * grid.tile.h;
+
+			ctx.fillStyle = '#cccccc';
+
+			for( var x = 0; x < grid.w; x++ )
+				ctx.fillRect( x * grid.tile.w, 0, 1, grid.h * grid.tile.h );
+			for( var y = 0; y < grid.h; y++ )
+				ctx.fillRect( 0, y * grid.tile.h, grid.w * grid.tile.w, 1 );
+
+			ctx.lineWidth = 3;
+			ctx.strokeStyle = '#000000';
+
+			for( var i = 0; i < grid.rooms.length; i++ ) {
+				var r = grid.rooms[i];
+				ctx.strokeRect(
+					r.x * grid.tile.w,
+					r.y * grid.tile.h,
+					r.w * grid.tile.w,
+					r.h * grid.tile.h );
+			}
+
+			ctx.fillStyle = '#FF9900';
+
+			for( var i = 0; i < grid.doors.length; i++ ) {
+				var d = grid.doors[i];
+				if( d.p1.x == d.p2.x )
+					ctx.fillRect(
+							d.p1.x * grid.tile.w -3,
+							d.p1.y * grid.tile.h +5,
+							6,  20 );
+				else
+					ctx.fillRect(
+							d.p1.x * grid.tile.w+5,
+							d.p1.y * grid.tile.h-3,
+							20, 6);
+			}
+		}
+
+		function init() {
+			canvas = document.getElementById('display');
+			ctx = canvas.getContext('2d');
+
+			//clearGrid();
+			drawGrid();
+			editingMode(false);
+		}
+
+		function editingMode( mode ) {
+			canvas.onmousedown = mode ? null : startRoom;
+			canvas.onmouseup = mode ? null: endRoom;
+			canvas.onclick = mode ? addDoor : null;
+		}
+
+		function getPosition( evt ) {
+			return {
+				x: ( evt.layerX / grid.tile.w ) | 0,
+				y: ( evt.layerY / grid.tile.h ) | 0
+			}
+		}
+
+		function getClosest( evt ) {
+			return {
+				x: Math.round( evt.layerX / grid.tile.w ),
+				y: Math.round( evt.layerY / grid.tile.h )
+			}
+		}
+
+		function startRoom( evt ) {
+			start = getPosition( evt );
+		}
+
+		function endRoom( evt ) {
+			var end = getPosition( evt );
+
+			// Minimum Room size of 2
+			if( start.x == end.x && start.y == end.y ) return;
+
+			grid.rooms.push({
+				x: start.x < end.x ? start.x : end.x,
+				y: start.y < end.y ? start.y : end.y,
+				w: Math.abs( start.x - end.x ) + 1,
+				h: Math.abs( start.y - end.y ) + 1
+			});
+
+			document.getElementById('roomlist').innerHTML = JSON.stringify(grid);
+			drawGrid();
+		}
+
+		function addDoor( evt ) {
+			var p1 = getClosest(evt);
+
+			var difx = p1.x * grid.tile.w - evt.layerX;
+			var dify = p1.y * grid.tile.h - evt.layerY;
+
+			if( Math.abs( difx ) < Math.abs( dify )) {
+				var p2 = { x: p1.x, y: dify > 0 ? p1.y -1 : p1.y +1  };
+			} else {
+				var p2 = { x: difx > 0 ? p1.x -1 : p1.x +1, y: p1.y };
+			}
+
+			grid.doors.push( p1.x < p2.x || p1.y < p2.y ? { p1: p1, p2: p2} : { p1: p2, p2: p1});
+			document.getElementById('roomlist').innerHTML = JSON.stringify(grid);
+			drawGrid();
+		}
+
+	</script>
+</head>
+<body onload="init()">
+	<canvas id="display" style="position: relative;"></canvas>
+	<div style="border: 1px solid black; position: absolute; left: 650px; top: 10px" id="roomlist"></div>
+	<div style="border: 1px solid black; position: absolute; left: 10px; top: 500px" >
+		<button onclick="editingMode(false);">Rooms</button>
+		<button onclick="editingMode(true)">Doors</button>
+	</div>
+</body>
+</html>

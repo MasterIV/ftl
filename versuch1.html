@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<title>FTL Versuch 1</title>
+	<script src="grid.js"></script>
+	<script src="game.js"></script>
+
+	<script>
+		var canvas, ctx;
+
+		var hero = {
+			x: 5*grid.tile.w,
+			y: 5*grid.tile.h,
+			speed: 500,
+
+			dest: null,
+			step: null,
+
+			draw: function( ctx ) {
+				tile = this.getTile();
+				ctx.fillStyle = '#00ff00';
+				ctx.fillRect( this.x+10, this.y+10, 10, 10 );
+			},
+
+			update: function( delta ) {
+				if( this.step ) {
+					this.step.remaining -= delta;
+
+					if( this.step.remaining <= 0 ) {
+						var tile = this.step.next;
+						this.x = tile.x*grid.tile.w;
+						this.y = tile.y*grid.tile.h;
+						this.room = tile.room;
+
+						if( this.step.door ) this.step.door.open = false;
+						if( tile.name == this.dest ) this.dest = null;
+
+						this.step = null;
+					} else {
+						this.x += delta / this.speed * this.step.x;
+						this.y += delta / this.speed * this.step.y;
+						this.room = this.getTile().room;
+					}
+				}
+
+				if( !this.step && this.dest ) {
+					var from = this.getTile();
+					this.step = from.transitions[this.dest];
+					this.step.remaining = this.speed;
+					this.step.x = ( this.step.next.x - from.x ) * grid.tile.w;
+					this.step.y = ( this.step.next.y - from.y ) * grid.tile.h;
+					if( this.step.door ) this.step.door.open = true;
+				}
+			},
+
+			moveTo: function( dest ) {
+				this.dest = dest;
+			},
+
+			getTile: function() {
+				return grid.data[ (( this.x + 15 ) / grid.tile.w ) | 0 ][ (( this.y +15 ) / grid.tile.h ) | 0 ];
+			}
+		}
+
+		function init() {
+			var canvas = document.getElementById('gameframe');
+			canvas.width = grid.w * grid.tile.w;
+			canvas.height = grid.h * grid.tile.h;
+			canvas.onclick = moveTo;
+
+			game.scene = {
+				draw: function( ctx ) {
+					grid.draw( ctx );
+					hero.draw( ctx );
+				},
+
+				update: function( delta ) {
+					hero.update( delta );
+				}
+			}
+
+			grid.init();
+			game.init();
+		}
+
+		function getPosition( evt ) {
+			return {
+				x: ( evt.layerX / grid.tile.w ) | 0,
+				y: ( evt.layerY / grid.tile.h ) | 0
+			}
+		}
+
+		function moveTo( evt ) {
+			var pos = getPosition( evt );
+			var dest = pos.x+'-'+pos.y;
+
+			if( grid.data[pos.x] && grid.data[pos.x][pos.y] )
+				hero.moveTo( dest );
+		}
+
+
+	</script>
+</head>
+<body onload="init()">
+<canvas id="gameframe" style="position: relative;"></canvas>
+</body>
+</html>
